@@ -1,0 +1,46 @@
+PicoDualOLED V1.3 — Sơ đồ cây thư mục (UTF-8)
+[+] Hiện có trong repository    [~] Dự kiến triển khai
+
+OledHave2Scren/
+├── [+] README.md
+├── [+] PROJECT_TREE.map
+├── [+] .gitignore
+├── [+] .vscode/                   # Cấu hình build và debug
+├── [+] CMakeLists.txt
+├── [+] pico_sdk_import.cmake
+├── [+] OledHave2Scren.c            # Chương trình mẫu hiện tại
+├── [+] blink.pio                   # Ví dụ PIO nháy LED
+├── [~] include/                    # Giao diện các mô-đun firmware
+│   ├── [~] animation_player.h
+│   ├── [~] animation_storage.h
+│   ├── [~] display_dma.h
+│   ├── [~] display_engine.h
+│   ├── [~] framebuffer.h
+│   ├── [~] frame_scheduler.h
+│   ├── [~] graphics.h
+│   ├── [~] memory_monitor.h
+│   ├── [~] ssd1306.h
+│   └── [~] text_renderer.h
+├── [~] src/                        # Firmware chạy trên Core 0
+│   ├── [~] main.c
+│   ├── [~] animation_player.c
+│   ├── [~] animation_storage.c
+│   ├── [~] display_dma.c
+│   ├── [~] display_engine.c
+│   ├── [~] framebuffer.c
+│   ├── [~] frame_scheduler.c
+│   ├── [~] graphics.c
+│   ├── [~] memory_monitor.c
+│   ├── [~] ssd1306.c
+│   └── [~] text_renderer.c
+├── [~] assets/
+│   └── [~] fonts/                  # Font bitmap lưu trong flash
+├── [~] tools/
+│   └── [~] animation_converter/    # Chuyển GIF thành frame bitmap 1 bit
+├── [~] tests/
+└── [~] docs/
+    ├── [~] DMA_DESIGN.md
+    ├── [~] MEMORY_MAP.md
+    └── [~] PERFORMANCE.md
+
+File linker .map, ELF, UF2 và báo cáo stack được sinh trong quá trình build.
