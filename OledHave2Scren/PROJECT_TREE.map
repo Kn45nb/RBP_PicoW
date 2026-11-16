@@ -1,15 +1,32 @@
 PicoDualOLED V1.3 — Sơ đồ cây thư mục (UTF-8)
-[+] Hiện có trong repository    [~] Dự kiến triển khai
+[+] Tệp/thư mục trong Git   [=] Có cục bộ, không theo dõi trong Git
+[~] Dự kiến triển khai     [>] Có tham chiếu phụ thuộc ngoài workspace
 
 OledHave2Scren/
 ├── [+] README.md
 ├── [+] PROJECT_TREE.map
 ├── [+] .gitignore
-├── [+] .vscode/                   # Cấu hình build và debug
-├── [+] CMakeLists.txt
-├── [+] pico_sdk_import.cmake
-├── [+] OledHave2Scren.c            # Chương trình mẫu hiện tại
-├── [+] blink.pio                   # Ví dụ PIO nháy LED
+├── [+] .vscode/
+│   ├── [+][>] c_cpp_properties.json   # IntelliSense, dùng compile_commands.json
+│   ├── [+][>] cmake-kits.json          # Compiler và Python do Pico extension cung cấp
+│   ├── [+][>] extensions.json         # Danh sách extension được đề xuất
+│   ├── [+][>] launch.json             # GDB, OpenOCD và SVD
+│   ├── [+][>] settings.json           # Đường dẫn SDK và công cụ
+│   └── [+][>] tasks.json              # Build, nạp firmware và debug
+├── [+][>] CMakeLists.txt              # Target pico_w, SDK 2.3.1
+├── [+][>] pico_sdk_import.cmake       # Nạp Pico SDK từ vị trí đã cấu hình
+├── [+][>] OledHave2Scren.c            # Core 1 kiểm tra DMA, Core 0 báo lỗi bằng LED
+├── [+] blink.pio                      # Ví dụ PIO nháy LED, chưa gắn vào target
+├── [=][>] build/                      # Kết quả sinh tự động, các tệp chính dưới đây
+│   ├── [=] CMakeCache.txt
+│   ├── [=] build.ninja
+│   ├── [=] compile_commands.json
+│   ├── [=] OledHave2Scren.bin
+│   ├── [=] OledHave2Scren.dis
+│   ├── [=] OledHave2Scren.elf
+│   ├── [=] OledHave2Scren.elf.map
+│   ├── [=] OledHave2Scren.hex
+│   └── [=] OledHave2Scren.uf2
 ├── [~] include/                    # Giao diện các mô-đun firmware
 │   ├── [~] animation_player.h
 │   ├── [~] animation_storage.h
@@ -38,9 +55,11 @@ OledHave2Scren/
 ├── [~] tools/
 │   └── [~] animation_converter/    # Chuyển GIF thành frame bitmap 1 bit
 ├── [~] tests/
-└── [~] docs/
+└── [=] docs/                        # Thư mục cục bộ hiện trống
     ├── [~] DMA_DESIGN.md
     ├── [~] MEMORY_MAP.md
     └── [~] PERFORMANCE.md
 
-File linker .map, ELF, UF2 và báo cáo stack được sinh trong quá trình build.
+Phạm vi cây là OledHave2Scren/. Các mục [>] tham chiếu phụ thuộc cài ngoài
+workspace. Danh sách đường dẫn và mục đích được ghi trong phần
+"Phụ thuộc ngoài workspace" của README.md cùng thư mục.
