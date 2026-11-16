@@ -37,6 +37,11 @@ pico_sdk_init()
 
 add_executable(OledHave2Scren OledHave2Scren.c )
 
+option(PICO_OLED_UI_TEST "Bật kiểm thử ảnh SRAM qua DMA trên OLED 1" OFF)
+if(PICO_OLED_UI_TEST)
+    target_compile_definitions(OledHave2Scren PRIVATE PICO_OLED_UI_TEST=1)
+endif()
+
 pico_set_program_name(OledHave2Scren "OledHave2Scren")
 pico_set_program_version(OledHave2Scren "0.1")
 

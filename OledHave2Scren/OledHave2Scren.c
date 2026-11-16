@@ -79,12 +79,142 @@ typedef enum
     ERROR_DMA_NO_CHANNEL = 2,
     ERROR_DMA_TIMEOUT = 3,
     ERROR_DMA_DATA = 4,
-    ERROR_CORE1_NO_RESULT = 5
+    ERROR_CORE1_NO_RESULT = 5,
+    ERROR_OLED_UI_TEST = 6
 }
 diagnostic_status_t;
 
 static const char src[] = "Hello, world! (from DMA)";
 static char dst[sizeof(src)];
+
+/*============================================================================================================================================================================
+UX/UI kiểm thử — Ảnh trong SRAM qua DMA lên OLED 1
+============================================================================================================================================================================*/
+
+#ifdef PICO_OLED_UI_TEST
+
+#define UI_OLED_ADDRESS    0x3C
+#define UI_OLED_WIDTH      128
+#define UI_OLED_PAGES      8
+#define UI_OLED_FRAME_SIZE (UI_OLED_WIDTH * UI_OLED_PAGES)
+#define UI_OLED_TIMEOUT_US 50000
+#define UI_OLED_PREVIEW_MS 1200
+
+static uint8_t ui_frame[UI_OLED_FRAME_SIZE];
+static uint16_t ui_dma_words[1 + UI_OLED_FRAME_SIZE];
+
+static bool ui_test_write_commands(const uint8_t *commands, size_t size)
+{
+    return i2c_write_timeout_us(I2C0_PORT, UI_OLED_ADDRESS, commands, size, false, UI_OLED_TIMEOUT_US) == (int)size;
+}
+
+static bool ui_test_send_frame(const uint8_t frame[static UI_OLED_FRAME_SIZE])
+{
+    // Lệnh đặt cửa sổ ảnh cũng thiết lập địa chỉ đích cho giao dịch DMA tiếp theo.
+    static const uint8_t window[] = {0x00, 0x21, 0, UI_OLED_WIDTH - 1, 0x22, 0, UI_OLED_PAGES - 1};
+    if (!ui_test_write_commands(window, sizeof(window)))
+    {
+        return false;
+    }
+
+    int channel = dma_claim_unused_channel(false);
+    if (channel < 0)
+    {
+        return false;
+    }
+
+    i2c_hw_t *hw = i2c_get_hw(I2C0_PORT);
+    (void)hw->clr_stop_det;
+    (void)hw->clr_tx_abrt;
+
+    // Byte 0x40 mở luồng dữ liệu SSD1306. Chỉ word cuối yêu cầu phát STOP.
+    ui_dma_words[0] = 0x40;
+    for (size_t i = 0; i < UI_OLED_FRAME_SIZE; ++i)
+    {
+        ui_dma_words[i + 1] = frame[i];
+    }
+    ui_dma_words[UI_OLED_FRAME_SIZE] |= I2C_IC_DATA_CMD_STOP_BITS;
+
+    dma_channel_config config = dma_channel_get_default_config(channel);
+    channel_config_set_transfer_data_size(&config, DMA_SIZE_16);
+    channel_config_set_read_increment(&config, true);
+    channel_config_set_write_increment(&config, false);
+    channel_config_set_dreq(&config, i2c_get_dreq(I2C0_PORT, true));
+    absolute_time_t deadline = make_timeout_time_us(UI_OLED_TIMEOUT_US);
+    __compiler_memory_barrier();
+    dma_channel_configure(channel, &config, &hw->data_cmd, ui_dma_words, count_of(ui_dma_words), true);
+
+    bool complete = false;
+    while (!time_reached(deadline))
+    {
+        uint32_t interrupts = hw->raw_intr_stat;
+        if ((interrupts & I2C_IC_RAW_INTR_STAT_TX_ABRT_BITS) ||
+            (dma_channel_hw_addr(channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_AHB_ERROR_BITS))
+        {
+            break;
+        }
+        if ((interrupts & I2C_IC_RAW_INTR_STAT_STOP_DET_BITS) &&
+            !dma_channel_is_busy(channel) && !(hw->status & I2C_IC_STATUS_MST_ACTIVITY_BITS))
+        {
+            complete = true;
+            break;
+        }
+        tight_loop_contents();
+    }
+
+    if (!complete)
+    {
+        // Dừng DMA trước khi đặt lại I2C0 để loại bỏ dữ liệu còn trong FIFO.
+        dma_channel_abort(channel);
+        i2c_deinit(I2C0_PORT);
+        i2c_init(I2C0_PORT, I2C0_BAUD_RATE);
+    }
+    else
+    {
+        (void)hw->clr_stop_det;
+    }
+    dma_channel_unclaim(channel);
+    return complete;
+}
+
+static bool run_oled_ui_test(void)
+{
+    // Màn 128 × 64 dùng charge pump nội và chế độ địa chỉ ngang.
+    static const uint8_t setup[] = {
+        0x00, 0xAE, 0xD5, 0x80, 0xA8, 63, 0xD3, 0, 0x40, 0x8D, 0x14,
+        0x20, 0, 0xA1, 0xC8, 0xDA, 0x12, 0x81, 0x7F, 0xD9, 0xF1,
+        0xDB, 0x40, 0x2E, 0xA4, 0xA6
+    };
+    static const uint8_t display_on[] = {0x00, 0xAF};
+
+    if (!ui_test_write_commands(setup, sizeof(setup)))
+    {
+        return false;
+    }
+
+    // Mẫu 1: ô bàn cờ 8 × 8 để kiểm tra thứ tự cột và page.
+    for (size_t page = 0; page < UI_OLED_PAGES; ++page)
+    {
+        for (size_t x = 0; x < UI_OLED_WIDTH; ++x)
+        {
+            ui_frame[page * UI_OLED_WIDTH + x] = ((page + x / 8) & 1u) ? 0xFF : 0x00;
+        }
+    }
+    if (!ui_test_send_frame(ui_frame) || !ui_test_write_commands(display_on, sizeof(display_on)))
+    {
+        return false;
+    }
+    sleep_ms(UI_OLED_PREVIEW_MS);
+
+    // Mẫu 2: sọc ngang lệch pha giữa hai nửa màn để kiểm tra cập nhật ảnh.
+    for (size_t i = 0; i < sizeof(ui_frame); ++i)
+    {
+        ui_frame[i] = (i % UI_OLED_WIDTH < UI_OLED_WIDTH / 2) ? 0x55 : 0xAA;
+    }
+    return ui_test_send_frame(ui_frame);
+}
+
+#endif
 
 /*============================================================================================================================================================================
 Nhân 1 — Khởi tạo ngoại vi và kiểm tra DMA
@@ -251,6 +381,13 @@ int main(void)
     {
         blink_error_forever((diagnostic_status_t)status, true);
     }
+
+#ifdef PICO_OLED_UI_TEST
+    if (!run_oled_ui_test())
+    {
+        blink_error_forever(ERROR_OLED_UI_TEST, true);
+    }
+#endif
 
     // Kiểm tra thành công thì để LED tắt.
     while (true)

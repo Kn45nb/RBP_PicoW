@@ -4,7 +4,7 @@ PicoDualOLED V1.3 là dự án firmware C11 cho Raspberry Pi Pico W (RP2040). Đ
 
 ## Hiện trạng
 
-Tệp [`OledHave2Scren.c`](OledHave2Scren.c) dùng Core 1 để khởi tạo hai bus I²C, một UART, một SPI và kiểm tra DMA sao chép dữ liệu từ flash sang SRAM. Core 0 báo lỗi bằng LED. USB stdio và UART stdio đều tắt. Driver SSD1306, Display Engine và DMA truyền qua I²C đang chờ triển khai.
+Tệp [`OledHave2Scren.c`](OledHave2Scren.c) dùng Core 1 để khởi tạo hai bus I²C, một UART, một SPI và kiểm tra DMA sao chép dữ liệu từ flash sang SRAM. Core 0 báo lỗi bằng LED. USB stdio và UART stdio đều tắt. Chế độ kiểm thử riêng đã có đường truyền DMA tới OLED 1. Display Engine và tích hợp thẻ SD đang chờ triển khai.
 
 [`blink.pio`](blink.pio) là ví dụ PIO nháy LED có sẵn trong Git. Target hiện chưa sinh `blink.pio.h` từ tệp này. Build có chạy `pioasm` cho chương trình PIO của driver CYW43 trong Pico SDK. GP10 và GP11 chưa được mã mẫu cấu hình. Có thể dùng GP10 để thử PIO với LED rời.
 
@@ -39,8 +39,9 @@ Các lệnh do Ninja sinh trên Windows cũng gọi `cmd.exe` của hệ điều
 | 3 | DMA sao chép quá thời hạn | LED tích hợp |
 | 4 | Dữ liệu DMA sao chép sai | LED tích hợp |
 | 5 | Core 1 khởi chạy quá hạn hoặc thiếu kết quả hợp lệ | LED tích hợp |
+| 6 | Kiểm thử OLED 1 thất bại khi bật `PICO_OLED_UI_TEST` | LED tích hợp |
 
-Watchdog khởi động lại Pico W nếu bước khởi chạy Core 1 bị kẹt. Firmware báo 5 nháy sau khi khởi động lại. Nếu LED tích hợp lỗi trong lúc báo mã 2–5, nhóm nháy chuyển sang LED rời.
+Watchdog khởi động lại Pico W nếu bước khởi chạy Core 1 bị kẹt. Firmware báo 5 nháy sau khi khởi động lại. Nếu LED tích hợp lỗi trong lúc báo mã 2–6, nhóm nháy chuyển sang LED rời.
 
 Nếu đã mắc LED dự phòng vào GP6 theo sơ đồ cũ, chuyển LED sang GP22 trước khi dùng I²C1.
 
@@ -63,6 +64,14 @@ Các cổng mới chỉ được khởi tạo. UART1 dành cho trao đổi dữ 
 | OLED 2 | I2C1 | GP6 | GP7 | `0x3C` |
 
 Hai màn đều có độ phân giải 128 × 64, dùng nguồn 3V3 và GND. Mỗi màn dùng một bus riêng ở tần số mục tiêu 400 kHz. Pinout, module và hệ thống tệp của thẻ SD sẽ được xác nhận trước khi tích hợp.
+
+## UX/UI kiểm thử ảnh qua DMA
+
+Thêm `-DPICO_OLED_UI_TEST=ON` khi configure CMake để bật kiểm thử. Tùy chọn mặc định là `OFF`. Có thể dùng một thư mục build riêng cho chế độ này.
+
+Cắm OLED SSD1306 128 × 64, địa chỉ `0x3C`, vào I²C0 trên GP4/GP5. Sau khi khởi động, OLED 1 hiện bàn cờ trong khoảng 1,2 giây rồi giữ mẫu sọc lệch pha. Hai mẫu được tạo trong framebuffer SRAM 1.024 byte. DMA đưa dữ liệu vào FIFO TX của I²C0. Test kiểm tra DMA hoàn tất, STOP trên bus và lỗi I²C. Nếu lỗi, LED phát 6 nháy mỗi cụm.
+
+Ảnh kiểm thử hiện được tạo trên Pico W. Để bổ sung bước đọc thẻ vào cùng framebuffer, cần xác nhận module, pinout, hệ thống tệp và định dạng ảnh trên thẻ.
 
 ## Kiến trúc Display Engine dự kiến theo đặc tả V1.3
 
