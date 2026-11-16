@@ -18,6 +18,7 @@ Lib
 #include "pico/cyw43_arch.h"
 #include "hardware/spi.h"
 #include "hardware/i2c.h"
+#include "hardware/uart.h"
 #include "hardware/dma.h"
 #include "hardware/sync.h"
 #include "hardware/watchdog.h"
@@ -32,11 +33,18 @@ Cấu hình ngoại vi
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
-#define I2C_PORT i2c0
-#define I2C_SDA 8
-#define I2C_SCL 9
+#define I2C0_SDA_PIN 4
+#define I2C0_SCL_PIN 5
+#define I2C1_SDA_PIN 6
+#define I2C1_SCL_PIN 7
+#define I2C_BAUD_RATE 400000
 
-#define FALLBACK_LED_PIN 6
+#define UART_PORT uart1
+#define UART_TX_PIN 8
+#define UART_RX_PIN 9
+#define UART_BAUD_RATE 115200
+
+#define FALLBACK_LED_PIN 22
 #define BLINK_PULSE_MS 100
 #define BLINK_PAUSE_MS 1200
 #define DMA_TIMEOUT_MS 10
@@ -97,6 +105,15 @@ static diagnostic_status_t check_dma_copy(void)
     return STATUS_OK;
 }
 
+static void init_i2c_bus(i2c_inst_t *bus, uint sda_pin, uint scl_pin)
+{
+    i2c_init(bus, I2C_BAUD_RATE);
+    gpio_set_function(sda_pin, GPIO_FUNC_I2C);
+    gpio_set_function(scl_pin, GPIO_FUNC_I2C);
+    gpio_pull_up(sda_pin);
+    gpio_pull_up(scl_pin);
+}
+
 static void core1_entry(void)
 {
     spi_init(SPI_PORT, 1000 * 1000);
@@ -109,11 +126,13 @@ static void core1_entry(void)
     gpio_put(PIN_CS, 1);
     gpio_set_dir(PIN_CS, GPIO_OUT);
 
-    i2c_init(I2C_PORT, 400 * 1000);
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
+    init_i2c_bus(i2c0, I2C0_SDA_PIN, I2C0_SCL_PIN);
+    init_i2c_bus(i2c1, I2C1_SDA_PIN, I2C1_SCL_PIN);
+
+    // Chuẩn bị UART1 để trao đổi dữ liệu khi cần.
+    uart_init(UART_PORT, UART_BAUD_RATE);
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
 
     multicore_fifo_push_blocking((uint32_t)check_dma_copy());
     while (true) {
@@ -127,7 +146,7 @@ Nhân 0 — Báo lỗi bằng LED
 
 static void init_fallback_led(void)
 {
-    // Mắc LED rời từ GP6 qua điện trở xuống GND.
+    // Mắc LED rời từ GP22 qua điện trở xuống GND.
     gpio_init(FALLBACK_LED_PIN);
     gpio_put(FALLBACK_LED_PIN, 0);
     gpio_set_dir(FALLBACK_LED_PIN, GPIO_OUT);

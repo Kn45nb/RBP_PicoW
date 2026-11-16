@@ -4,9 +4,9 @@ PicoDualOLED V1.3 là dự án firmware C11 cho Raspberry Pi Pico W (RP2040). Đ
 
 ## Hiện trạng
 
-Tệp [`OledHave2Scren.c`](OledHave2Scren.c) dùng Core 1 để khởi tạo SPI0 (GP16–GP19), I²C0 (SDA GP8, SCL GP9) và kiểm tra DMA sao chép dữ liệu từ flash sang SRAM. Core 0 báo lỗi bằng LED. USB stdio và UART stdio đều tắt. Driver SSD1306, Display Engine và DMA truyền qua I²C đang chờ triển khai.
+Tệp [`OledHave2Scren.c`](OledHave2Scren.c) dùng Core 1 để khởi tạo hai bus I²C, một UART, một SPI và kiểm tra DMA sao chép dữ liệu từ flash sang SRAM. Core 0 báo lỗi bằng LED. USB stdio và UART stdio đều tắt. Driver SSD1306, Display Engine và DMA truyền qua I²C đang chờ triển khai.
 
-[`blink.pio`](blink.pio) là ví dụ PIO nháy LED có sẵn trong Git. Target hiện chưa sinh `blink.pio.h` từ tệp này. Build có chạy `pioasm` cho chương trình PIO của driver CYW43 trong Pico SDK. GP10 và GP11 chưa được mã mẫu cấu hình. Có thể dùng GP10 để thử PIO với LED rời, còn GP6 dành cho báo lỗi dự phòng trong chương trình mẫu.
+[`blink.pio`](blink.pio) là ví dụ PIO nháy LED có sẵn trong Git. Target hiện chưa sinh `blink.pio.h` từ tệp này. Build có chạy `pioasm` cho chương trình PIO của driver CYW43 trong Pico SDK. GP10 và GP11 chưa được mã mẫu cấu hình. Có thể dùng GP10 để thử PIO với LED rời.
 
 [`PROJECT_TREE.map`](PROJECT_TREE.map) ghi cấu trúc hiện tại, đầu ra build và các mô-đun dự kiến. Build trong `build/` hiện có ELF, linker map và UF2. Việc nạp firmware và thử mã nháy trên Pico W vẫn cần xác minh.
 
@@ -34,7 +34,7 @@ Các lệnh do Ninja sinh trên Windows cũng gọi `cmd.exe` của hệ điều
 
 | Số nháy | Trạng thái | LED |
 | --- | --- | --- |
-| 1 | Khởi tạo CYW43 hoặc lần ghi đầu tiên vào LED tích hợp thất bại | LED rời trên GP6, qua điện trở xuống GND |
+| 1 | Khởi tạo CYW43 hoặc lần ghi đầu tiên vào LED tích hợp thất bại | LED rời trên GP22, qua điện trở xuống GND |
 | 2 | Hết kênh DMA trống | LED tích hợp |
 | 3 | DMA sao chép quá thời hạn | LED tích hợp |
 | 4 | Dữ liệu DMA sao chép sai | LED tích hợp |
@@ -42,7 +42,18 @@ Các lệnh do Ninja sinh trên Windows cũng gọi `cmd.exe` của hệ điều
 
 Watchdog khởi động lại Pico W nếu bước khởi chạy Core 1 bị kẹt. Firmware báo 5 nháy sau khi khởi động lại. Nếu LED tích hợp lỗi trong lúc báo mã 2–5, nhóm nháy chuyển sang LED rời.
 
-GP6 là chân báo lỗi dự phòng của chương trình mẫu. Đặc tả OLED bên dưới dành GP6 cho I²C1 ở giai đoạn tích hợp màn hình.
+Nếu đã mắc LED dự phòng vào GP6 theo sơ đồ cũ, chuyển LED sang GP22 trước khi dùng I²C1.
+
+## Cổng ngoại vi đã khởi tạo
+
+| Cổng | Chân GPIO | Cấu hình |
+| --- | --- | --- |
+| I²C0 | GP4 SDA, GP5 SCL | 400 kHz |
+| I²C1 | GP6 SDA, GP7 SCL | 400 kHz |
+| UART1 | GP8 TX, GP9 RX | 115200 baud, 8N1, không điều khiển luồng |
+| SPI0 | GP16 MISO, GP17 CS, GP18 SCK, GP19 MOSI | 1 MHz, CS điều khiển bằng GPIO và ở mức cao khi rảnh |
+
+Các cổng mới chỉ được khởi tạo. UART1 dành cho trao đổi dữ liệu và firmware chưa gửi ký tự khởi động. Kiểm tra điện trở kéo lên của từng bus I²C trước khi chạy ở 400 kHz.
 
 ## Kết nối OLED theo đặc tả
 

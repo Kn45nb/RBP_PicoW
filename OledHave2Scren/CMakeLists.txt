@@ -57,6 +57,7 @@ target_include_directories(OledHave2Scren PRIVATE
 target_link_libraries(OledHave2Scren 
         hardware_spi
         hardware_i2c
+        hardware_uart
         hardware_dma
         hardware_watchdog
         pico_multicore
