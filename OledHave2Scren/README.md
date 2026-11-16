@@ -4,9 +4,15 @@ PicoDualOLED V1.3 là dự án firmware C11 cho Raspberry Pi Pico W (RP2040). Đ
 
 ## Hiện trạng
 
-Tệp [`OledHave2Scren.c`](OledHave2Scren.c) dùng Core 1 để khởi tạo hai bus I²C, một UART, một SPI và kiểm tra DMA sao chép dữ liệu từ flash sang SRAM. Core 0 báo lỗi bằng LED. USB stdio và UART stdio đều tắt. Chế độ kiểm thử riêng đã có đường truyền DMA tới OLED 1. Display Engine và tích hợp thẻ SD đang chờ triển khai.
+`main()` trong [`OledHave2Scren.c`](OledHave2Scren.c) chạy trên **Core 0 vật lý** và gọi [`core0_entry()`](core0.c). Mặc định, Core 0 gọi [`app_prepare_hardware()`](src/app_hardware.c) để khởi tạo hai bus I²C, UART, SPI và kiểm tra DMA sao chép từ flash sang SRAM. Core 0 cũng báo lỗi bằng LED và chạy kiểm thử OLED nếu được bật. Cấu hình chân, tốc độ và mã lỗi nằm trong [`include/app_config.h`](include/app_config.h).
 
-[`blink.pio`](blink.pio) là ví dụ PIO nháy LED có sẵn trong Git. Target hiện chưa sinh `blink.pio.h` từ tệp này. Build có chạy `pioasm` cho chương trình PIO của driver CYW43 trong Pico SDK. GP10 và GP11 chưa được mã mẫu cấu hình. Có thể dùng GP10 để thử PIO với LED rời.
+`PICO_PIO_TASKS` mặc định là `ON`. Core 0 đọc mã từ PIO và khởi chạy [`core1_entry()`](core1.c) trên **Core 1 vật lý** khi có yêu cầu đầu tiên. Core 1 nhận mã qua FIFO, gọi [`app_run_task()`](src/app_tasks.c) để chọn tệp `taskN.c` tương ứng rồi gửi kết quả về Core 0. Có thể tắt chế độ này bằng `-DPICO_PIO_TASKS=OFF`.
+
+`PICO_INIT_ON_CORE1` mặc định là `OFF`. Nếu bật tùy chọn này, Core 1 được khởi chạy sớm để chạy `app_prepare_hardware()` rồi chờ tác vụ. Chế độ `PICO_OLED_UI_TEST` vẫn chạy một lượt thử trên Core 0 lúc khởi động, trước khi Core 0 gửi tác vụ PIO, để hai nhân dùng I²C0 theo lượt.
+
+USB stdio và UART stdio đều tắt. Chế độ kiểm thử riêng đã có đường truyền DMA tới OLED 1. Display Engine và tích hợp thẻ SD đang chờ triển khai.
+
+[`blink.pio`](blink.pio) là ví dụ PIO nháy LED. Target hiện dùng [`task_input.pio`](task_input.pio) cho tín hiệu chọn tác vụ. Build cũng chạy `pioasm` cho chương trình PIO của driver CYW43 trong Pico SDK.
 
 [`PROJECT_TREE.map`](PROJECT_TREE.map) ghi cấu trúc hiện tại, đầu ra build và các mô-đun dự kiến. Build trong `build/` hiện có ELF, linker map và UF2. Việc nạp firmware và thử mã nháy trên Pico W vẫn cần xác minh.
 
@@ -20,7 +26,7 @@ Workspace của repository là `D:\GIT\RBP_PicoW`. Trên Windows, `%USERPROFILE%
 | `pico_sdk_import.cmake`, mã C, IntelliSense và debug | `%USERPROFILE%\.pico-sdk\sdk\2.3.1\` | `pico_sdk_init.cmake`, header, thư viện, driver, linker script và tệp SVD của RP2040 |
 | CMake, `build.ninja`, cấu hình VS Code | `%USERPROFILE%\.pico-sdk\toolchain\15_2_Rel1\bin\` | ARM GCC/G++, `objdump`, `objcopy` và GDB của toolchain |
 | CMake và VS Code | `%USERPROFILE%\.pico-sdk\cmake\v4.5.0\bin\cmake.exe` và `%USERPROFILE%\.pico-sdk\ninja\v1.13.2\ninja.exe` | Configure và build |
-| `build.ninja` | `%USERPROFILE%\.pico-sdk\tools\2.3.1\pioasm\pioasm.exe` | Biên dịch chương trình PIO của driver CYW43 |
+| `build.ninja` | `%USERPROFILE%\.pico-sdk\tools\2.3.1\pioasm\pioasm.exe` | Biên dịch chương trình PIO chọn tác vụ và chương trình PIO của driver CYW43 |
 | `build.ninja`, tác vụ `Run Project` | `%USERPROFILE%\.pico-sdk\picotool\2.3.1\picotool\picotool.exe` | Tạo UF2 và nạp firmware |
 | CMake, `cmake-kits.json` | Python 3 từ Pico extension hoặc do CMake tìm thấy. Cache hiện ghi `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`. | Chạy công cụ build của SDK |
 | `tasks.json`, `launch.json` | `openocd` do môi trường hoặc extension cung cấp và script ở `%USERPROFILE%\.pico-sdk\openocd\0.12.0+dev\scripts\` | Nạp và debug qua SWD |
@@ -38,10 +44,11 @@ Các lệnh do Ninja sinh trên Windows cũng gọi `cmd.exe` của hệ điều
 | 2 | Hết kênh DMA trống | LED tích hợp |
 | 3 | DMA sao chép quá thời hạn | LED tích hợp |
 | 4 | Dữ liệu DMA sao chép sai | LED tích hợp |
-| 5 | Core 1 khởi chạy quá hạn hoặc thiếu kết quả hợp lệ | LED tích hợp |
-| 6 | Kiểm thử OLED 1 thất bại khi bật `PICO_OLED_UI_TEST` | LED tích hợp |
+| 5 | Core 1 khởi chạy hoặc phản hồi quá hạn, hoặc trả mã không hợp lệ | LED tích hợp |
+| 6 | Kiểm thử OLED 1 thất bại | LED tích hợp |
+| 7 | Không khởi tạo được state machine PIO đọc tác vụ | LED tích hợp |
 
-Watchdog khởi động lại Pico W nếu bước khởi chạy Core 1 bị kẹt. Firmware báo 5 nháy sau khi khởi động lại. Nếu LED tích hợp lỗi trong lúc báo mã 2–6, nhóm nháy chuyển sang LED rời.
+Watchdog khởi động lại Pico W nếu bước khởi chạy Core 1 bị kẹt. Firmware báo 5 nháy sau khi khởi động lại. Với lỗi do một tác vụ trả về, Core 0 nháy một cụm rồi tiếp tục nhận lệnh. Nếu LED tích hợp lỗi, nhóm nháy chuyển sang LED rời.
 
 Nếu đã mắc LED dự phòng vào GP6 theo sơ đồ cũ, chuyển LED sang GP22 trước khi dùng I²C1.
 
@@ -55,6 +62,19 @@ Nếu đã mắc LED dự phòng vào GP6 theo sơ đồ cũ, chuyển LED sang 
 | SPI0 | GP16 MISO, GP17 CS, GP18 SCK, GP19 MOSI | 1 MHz, CS điều khiển bằng GPIO và ở mức cao khi rảnh |
 
 Các cổng mới chỉ được khởi tạo. UART1 dành cho trao đổi dữ liệu và firmware chưa gửi ký tự khởi động. Kiểm tra điện trở kéo lên của từng bus I²C trước khi chạy ở 400 kHz.
+
+## Chọn tác vụ bằng PIO
+
+Nối chung GND và dùng tín hiệu logic 3,3 V. **GP10** là bit thấp `D0`, **GP11** là bit cao `D1`, **GP12** là `STROBE`. Giữ `STROBE` thấp khi rảnh, đặt ổn định `D1:D0` rồi đưa `STROBE` lên cao để chốt mã. Hạ `STROBE` trước khi gửi lệnh tiếp theo. Firmware chạy mỗi lần một tác vụ. Hãy gửi từng xung và đợi tác vụ trước xử lý xong; FIFO PIO có dung lượng hữu hạn.
+
+| D1:D0 | Hàm trên Core 1 | Tác vụ |
+| --- | --- | --- |
+| `00` | [`task0_run()`](src/task0.c) | Kiểm tra DMA sao chép vào SRAM |
+| `01` | [`task1_run()`](src/task1.c) | Hiện bàn cờ, đợi 1,2 giây rồi hiện sọc |
+| `10` | [`task2_run()`](src/task2.c) | Hiện riêng ảnh bàn cờ |
+| `11` | [`task3_run()`](src/task3.c) | Hiện riêng ảnh sọc lệch pha |
+
+Ba tác vụ hiển thị dùng OLED 1 trên I²C0. Muốn bổ sung hoặc đổi tác vụ, sửa bảng mã tại [`app_tasks.h`](include/app_tasks.h) và bộ phân lệnh trong [`app_tasks.c`](src/app_tasks.c). Bộ chọn hai bit hiện có bốn mã.
 
 ## Kết nối OLED theo đặc tả
 
@@ -70,6 +90,8 @@ Hai màn đều có độ phân giải 128 × 64, dùng nguồn 3V3 và GND. M�
 Thêm `-DPICO_OLED_UI_TEST=ON` khi configure CMake để bật kiểm thử. Tùy chọn mặc định là `OFF`. Có thể dùng một thư mục build riêng cho chế độ này.
 
 Cắm OLED SSD1306 128 × 64, địa chỉ `0x3C`, vào I²C0 trên GP4/GP5. Sau khi khởi động, OLED 1 hiện bàn cờ trong khoảng 1,2 giây rồi giữ mẫu sọc lệch pha. Hai mẫu được tạo trong framebuffer SRAM 1.024 byte. DMA đưa dữ liệu vào FIFO TX của I²C0. Test kiểm tra DMA hoàn tất, STOP trên bus và lỗi I²C. Nếu lỗi, LED phát 6 nháy mỗi cụm.
+
+Task 1 điều phối chuỗi ảnh. Task 2 và Task 3 giữ hàm dựng mẫu tương ứng. Bộ phân lệnh sở hữu framebuffer dùng chung. [`ssd1306.c`](src/ssd1306.c) nhận framebuffer và chuẩn bị lệnh cho màn hình, với một `ssd1306_t` giữ bus, địa chỉ và bộ đệm lệnh DMA. [`display_dma.c`](src/display_dma.c) thực hiện giao dịch I²C và xử lý timeout. Phần OLED được biên dịch khi bật `PICO_OLED_UI_TEST` hoặc `PICO_PIO_TASKS`.
 
 Ảnh kiểm thử hiện được tạo trên Pico W. Để bổ sung bước đọc thẻ vào cùng framebuffer, cần xác nhận module, pinout, hệ thống tệp và định dạng ảnh trên thẻ.
 

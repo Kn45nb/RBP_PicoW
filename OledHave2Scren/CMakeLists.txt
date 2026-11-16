@@ -35,11 +35,43 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(OledHave2Scren OledHave2Scren.c )
+add_executable(OledHave2Scren
+    OledHave2Scren.c
+    core0.c
+    src/app_hardware.c
+    src/task0.c
+)
+
+option(PICO_INIT_ON_CORE1 "Chạy khởi tạo và kiểm tra DMA trên Core 1 vật lý" OFF)
+if(PICO_INIT_ON_CORE1)
+    target_compile_definitions(OledHave2Scren PRIVATE PICO_INIT_ON_CORE1=1)
+endif()
+
+option(PICO_PIO_TASKS "Nhận mã tác vụ từ PIO và chạy trên Core 1" ON)
+if(PICO_PIO_TASKS OR PICO_INIT_ON_CORE1)
+    target_sources(OledHave2Scren PRIVATE core1.c)
+    target_link_libraries(OledHave2Scren hardware_watchdog pico_multicore)
+endif()
+
+if(PICO_PIO_TASKS)
+    target_compile_definitions(OledHave2Scren PRIVATE PICO_PIO_TASKS=1)
+    pico_generate_pio_header(OledHave2Scren ${CMAKE_CURRENT_LIST_DIR}/task_input.pio)
+    target_link_libraries(OledHave2Scren hardware_pio)
+endif()
 
 option(PICO_OLED_UI_TEST "Bật kiểm thử ảnh SRAM qua DMA trên OLED 1" OFF)
 if(PICO_OLED_UI_TEST)
     target_compile_definitions(OledHave2Scren PRIVATE PICO_OLED_UI_TEST=1)
+endif()
+if(PICO_OLED_UI_TEST OR PICO_PIO_TASKS)
+    target_sources(OledHave2Scren PRIVATE
+        src/app_tasks.c
+        src/task1.c
+        src/task2.c
+        src/task3.c
+        src/ssd1306.c
+        src/display_dma.c
+    )
 endif()
 
 pico_set_program_name(OledHave2Scren "OledHave2Scren")
@@ -56,6 +88,7 @@ target_link_libraries(OledHave2Scren
 # Add the standard include files to the build
 target_include_directories(OledHave2Scren PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 # Add any user requested libraries
@@ -64,8 +97,6 @@ target_link_libraries(OledHave2Scren
         hardware_i2c
         hardware_uart
         hardware_dma
-        hardware_watchdog
-        pico_multicore
         pico_cyw43_arch_none
         )
 

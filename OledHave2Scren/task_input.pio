@@ -1,0 +1,9 @@
+.program task_input
+
+.wrap_target
+    wait 0 pin 2     ; Chờ STROBE xuống thấp trước khi nhận lệnh.
+    wait 1 pin 2     ; Chốt mã sau cạnh lên của STROBE.
+    mov isr, null
+    in pins, 2       ; D1:D0 nằm ở hai bit thấp của từ kết quả.
+    push block
+.wrap

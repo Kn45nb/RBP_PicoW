@@ -1,5 +1,5 @@
 PicoDualOLED V1.3 — Sơ đồ cây thư mục (UTF-8)
-[+] Tệp/thư mục trong Git   [=] Có cục bộ, không theo dõi trong Git
+[+] Tệp/thư mục dự án       [=] Có cục bộ, không theo dõi trong Git
 [~] Dự kiến triển khai     [>] Có tham chiếu phụ thuộc ngoài workspace
 
 OledHave2Scren/
@@ -15,8 +15,11 @@ OledHave2Scren/
 │   └── [+][>] tasks.json              # Build, nạp firmware và debug
 ├── [+][>] CMakeLists.txt              # Target pico_w, SDK 2.3.1
 ├── [+][>] pico_sdk_import.cmake       # Nạp Pico SDK từ vị trí đã cấu hình
-├── [+][>] OledHave2Scren.c            # Ngoại vi, LED lỗi và kiểm thử ảnh SRAM → DMA → OLED 1
+├── [+] OledHave2Scren.c               # Điểm vào chương trình
+├── [+][>] core0.c                     # Core 0 vật lý: đọc PIO, giao tác vụ và báo lỗi
+├── [+][>] core1.c                     # Core 1 vật lý: nhận FIFO và gọi bộ phân lệnh
 ├── [+] blink.pio                      # Ví dụ PIO nháy LED, chưa gắn vào target
+├── [+] task_input.pio                 # Đọc D1:D0 theo cạnh lên STROBE
 ├── [=][>] build/                      # Kết quả sinh tự động, các tệp chính dưới đây
 │   ├── [=] CMakeCache.txt
 │   ├── [=] build.ninja
@@ -27,29 +30,40 @@ OledHave2Scren/
 │   ├── [=] OledHave2Scren.elf.map
 │   ├── [=] OledHave2Scren.hex
 │   └── [=] OledHave2Scren.uf2
-├── [~] include/                    # Giao diện các mô-đun firmware
+├── [+] include/                    # Giao diện các mô-đun firmware
+│   ├── [+] app_config.h            # Chân ngoại vi, tốc độ và mã trạng thái
+│   ├── [+] app_cores.h             # Điểm vào của hai nhân
+│   ├── [+] app_hardware.h          # Giao diện khởi tạo ngoại vi và kiểm tra DMA
+│   ├── [+][>] app_tasks.h          # Mã lệnh và giao diện phân tác vụ
 │   ├── [~] animation_player.h
 │   ├── [~] animation_storage.h
-│   ├── [~] display_dma.h
+│   ├── [+][>] display_dma.h
 │   ├── [~] display_engine.h
 │   ├── [~] framebuffer.h
 │   ├── [~] frame_scheduler.h
 │   ├── [~] graphics.h
 │   ├── [~] memory_monitor.h
-│   ├── [~] ssd1306.h
+│   ├── [+][>] ssd1306.h
 │   └── [~] text_renderer.h
-├── [~] src/                        # Firmware chạy trên Core 0
+├── [+] src/                        # Module kiểm thử OLED và các phần dự kiến
+│   ├── [+][>] app_hardware.c       # app_prepare_hardware(): chạy trên nhân được chọn
+│   ├── [+][>] app_tasks.c          # Phân lệnh và giữ bộ đệm OLED dùng chung
 │   ├── [~] main.c
 │   ├── [~] animation_player.c
 │   ├── [~] animation_storage.c
-│   ├── [~] display_dma.c
+│   ├── [+][>] display_dma.c
 │   ├── [~] display_engine.c
 │   ├── [~] framebuffer.c
 │   ├── [~] frame_scheduler.c
 │   ├── [~] graphics.c
 │   ├── [~] memory_monitor.c
-│   ├── [~] ssd1306.c
-│   └── [~] text_renderer.c
+│   ├── [+][>] oled_tasks.h         # Giao diện nội bộ giữa các tác vụ OLED
+│   ├── [+][>] ssd1306.c
+│   ├── [~] text_renderer.c
+│   ├── [+][>] task0.c              # Kiểm tra DMA SRAM
+│   ├── [+][>] task1.c              # Chuỗi hai mẫu OLED
+│   ├── [+][>] task2.c              # Mẫu bàn cờ
+│   └── [+][>] task3.c              # Mẫu sọc lệch pha
 ├── [~] assets/
 │   └── [~] fonts/                  # Font bitmap lưu trong flash
 ├── [~] tools/
