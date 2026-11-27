@@ -1,0 +1,14 @@
+# Target labels
+ picotoolBuild
+# Source files and their labels
+D:/GIT/RBP_PicoW/build-manual/CMakeFiles/picotoolBuild
+D:/GIT/RBP_PicoW/build-manual/CMakeFiles/picotoolBuild.rule
+D:/GIT/RBP_PicoW/build-manual/CMakeFiles/picotoolBuild-complete.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-build.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-configure.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-download.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-install.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-mkdir.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-patch.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-test.rule
+D:/GIT/RBP_PicoW/build-manual/picotool/src/picotoolBuild-stamp/picotoolBuild-update.rule
