@@ -2,3 +2,6 @@
 /.tools/
 /.tool/
 /.dl/
+
+/build-manual/
+/build-offline/
