@@ -1,6 +1,0 @@
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/picotool.exe
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/picotoolTargets.cmake
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/picotoolTargets-release.cmake
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/picotoolConfig.cmake
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/picotoolConfigVersion.cmake
-D:/GIT/RBP_PicoW/build-manual/_deps/picotool/enc_bootloader.elf

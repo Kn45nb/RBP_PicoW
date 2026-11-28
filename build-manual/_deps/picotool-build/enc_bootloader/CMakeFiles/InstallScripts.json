@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"D:/GIT/RBP_PicoW/build-manual/_deps/picotool-build/enc_bootloader/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"D:/GIT/RBP_PicoW/build-manual/_deps/picotool-subbuild/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
