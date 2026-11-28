@@ -3,5 +3,6 @@
 /.tool/
 /.dl/
 
-/build-manual/
 /build-offline/
+/build-manual/
+/build-check/
