@@ -7,6 +7,18 @@ project(main C CXX ASM)
 pico_sdk_init()
 
 add_executable(main main.c)
-target_link_libraries(main PRIVATE pico_stdlib)
 
-pico_add_extra_outputs(main)     # @Kn45nb Kiểm thử
+target_sources(main PRIVATE
+    .lib/SSD1308/ssd1308.c
+)
+
+target_include_directories(main PRIVATE
+    .lib/SSD1308
+)
+
+target_link_libraries(main PRIVATE
+    pico_stdlib
+    hardware_i2c
+)
+
+pico_add_extra_outputs(main)
